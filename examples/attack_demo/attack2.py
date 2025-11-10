@@ -14,6 +14,7 @@ from collections import Counter
 from math import gcd
 from functools import reduce
 import itertools
+from vighill_cipher import VigHillCipher
 
 class IntelligentCryptanalyzer:
     def __init__(self, ciphertext, known_plaintext_samples=None):
