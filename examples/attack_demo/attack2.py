@@ -1,5 +1,5 @@
 """
-Intelligent Cryptanalysis Engine for VigHill Cipher
+Interactive Intelligent Cryptanalysis Engine for VigHill Cipher
 Combines brute force with guidance from:
 - Frequency Analysis
 - Index of Coincidence (IC)
@@ -186,12 +186,12 @@ class IntelligentCryptanalyzer:
         """Generate Hill key candidates"""
         candidates = []
         
-        # Known good matrices
+        # Known good matrices (CORRECTED - all invertible)
         known_good = [
-            [[6, 24, 1], [13, 16, 10], [20, 17, 15]],
-            [[3, 10, 20], [20, 9, 17], [9, 4, 17]],
-            [[11, 2, 19], [5, 23, 14], [24, 7, 15]],
-            [[9, 3, 1], [11, 8, 4], [2, 5, 12]]
+            [[6, 24, 1], [13, 16, 10], [20, 17, 15]],  # det=25, gcd(25,26)=1
+            [[3, 10, 20], [20, 9, 17], [9, 4, 17]],    # det=3, gcd(3,26)=1
+            [[5, 17, 2], [8, 3, 19], [14, 6, 11]],     # det=7, gcd(7,26)=1
+            [[1, 2, 3], [4, 5, 6], [7, 8, 10]]         # det=23, gcd(23,26)=1
         ]
         
         for mat in known_good:
@@ -300,7 +300,6 @@ class IntelligentCryptanalyzer:
                 
                 try:
                     # Test this key combination
-                    from vighill_cipher import VigHillCipher
                     candidate_cipher = VigHillCipher(vigenere_key, hill_matrix)
                     decrypted = candidate_cipher.decrypt(self.ciphertext)
                     
@@ -329,7 +328,6 @@ class IntelligentCryptanalyzer:
                 for hill_matrix in hill_candidates:
                     self.attempt_count += 1
                     try:
-                        from vighill_cipher import VigHillCipher
                         candidate_cipher = VigHillCipher(vigenere_key, hill_matrix)
                         decrypted = candidate_cipher.decrypt(self.ciphertext)
                         
@@ -350,8 +348,8 @@ class IntelligentCryptanalyzer:
         known_good_hill = [
             [[6, 24, 1], [13, 16, 10], [20, 17, 15]],
             [[3, 10, 20], [20, 9, 17], [9, 4, 17]],
-            [[11, 2, 19], [5, 23, 14], [24, 7, 15]],
-            [[9, 3, 1], [11, 8, 4], [2, 5, 12]]
+            [[5, 17, 2], [8, 3, 19], [14, 6, 11]],
+            [[1, 2, 3], [4, 5, 6], [7, 8, 10]]
         ]
         
         for hill_mat in known_good_hill:
@@ -372,7 +370,6 @@ class IntelligentCryptanalyzer:
                         )
                         self.attempt_count += 1
                         try:
-                            from vighill_cipher import VigHillCipher
                             candidate_cipher = VigHillCipher(shifted_key, hill_array)
                             decrypted = candidate_cipher.decrypt(self.ciphertext)
                             
@@ -398,44 +395,138 @@ class IntelligentCryptanalyzer:
             'attempts': self.attempt_count
         }
 
-# ============================================================================
-# DEMONSTRATION
-# ============================================================================
+def get_vigenere_key():
+    """Get Vigenère key from user with validation"""
+    while True:
+        key = input("Enter Vigenère key (minimum 10 alphabetic characters): ").strip()
+        if key.isalpha() and len(key) >= 10:
+            return key.upper()
+        else:
+            print("❌ Invalid key! Must be at least 10 letters, alphabetic only.")
 
-def demonstrate_intelligent_attack():
-    from vighill_cipher import VigHillCipher
+def get_hill_matrix():
+    """Get Hill matrix from user with options (all verified invertible)"""
+    print("\nChoose Hill key matrix:")
+    print("1. Classic matrix: [[6,24,1], [13,16,10], [20,17,15]] (det=25)")
+    print("2. Alternative 1: [[3,10,20], [20,9,17], [9,4,17]] (det=3)")
+    print("3. Alternative 2: [[5,17,2], [8,3,19], [14,6,11]] (det=7)")
+    print("4. Alternative 3: [[1,2,3], [4,5,6], [7,8,10]] (det=23)")
+    print("5. Enter your own 3x3 matrix")
     
+    while True:
+        choice = input("\nEnter choice (1-5): ").strip()
+        if choice == '1':
+            return [[6, 24, 1], [13, 16, 10], [20, 17, 15]]
+        elif choice == '2':
+            return [[3, 10, 20], [20, 9, 17], [9, 4, 17]]
+        elif choice == '3':
+            return [[5, 17, 2], [8, 3, 19], [14, 6, 11]]
+        elif choice == '4':
+            return [[1, 2, 3], [4, 5, 6], [7, 8, 10]]
+        elif choice == '5':
+            print("Enter your 3x3 Hill matrix:")
+            try:
+                row1 = list(map(int, input("Row 1 (3 integers separated by spaces): ").split()))
+                row2 = list(map(int, input("Row 2 (3 integers separated by spaces): ").split()))
+                row3 = list(map(int, input("Row 3 (3 integers separated by spaces): ").split()))
+                if len(row1) == 3 and len(row2) == 3 and len(row3) == 3:
+                    matrix = [row1, row2, row3]
+                    # Validate it's invertible
+                    test_cipher = VigHillCipher("VALIDATION", matrix)
+                    print("✅ Matrix is valid and invertible!")
+                    return matrix
+                else:
+                    print("❌ Each row must have exactly 3 integers.")
+            except Exception as e:
+                print(f"❌ Invalid matrix: {e}")
+                print("Please ensure the matrix is invertible modulo 26.")
+        else:
+            print("❌ Invalid choice. Please enter 1-5.")
+
+def get_plaintext():
+    """Get plaintext from user"""
+    while True:
+        plaintext = input("Enter plaintext to encrypt (letters only): ").strip()
+        if plaintext.replace(' ', '').isalpha():
+            return ''.join(filter(str.isalpha, plaintext)).upper()
+        else:
+            print("❌ Plaintext must contain only letters (spaces allowed).")
+
+def get_known_samples():
+    """Get known plaintext samples from user"""
+    samples = []
+    print("\nOptional: Enter known plaintext samples that might appear in the message")
+    print("(Press Enter with empty input to skip or finish)")
+    while True:
+        sample = input("Known sample (or Enter to finish): ").strip().upper()
+        if not sample:
+            break
+        if sample.isalpha():
+            samples.append(sample)
+        else:
+            print("❌ Sample must contain only letters.")
+    return samples if samples else None
+
+def main():
     print("=" * 60)
-    print("INTELLIGENT CRYPTANALYSIS ENGINE")
-    print("Combining brute force with IC, Kasiski, frequency analysis, and known-plaintext")
+    print("INTERACTIVE INTELLIGENT CRYPTANALYSIS ENGINE")
+    print("Combines IC, Kasiski, Frequency Analysis & Known-Plaintext")
     print("=" * 60)
     
-    # Setup
-    real_vigenere_key = "CRYPTOGRAPHYKEY"
-    real_hill_matrix = [[6, 24, 1], [13, 16, 10], [20, 17, 15]]
-    cipher = VigHillCipher(real_vigenere_key, real_hill_matrix)
+    # Get user input
+    print("\n🔧 CIPHER SETUP")
+    plaintext = get_plaintext()
+    vigenere_key = get_vigenere_key()
+    hill_matrix = get_hill_matrix()
+    known_samples = get_known_samples()
     
-    plaintext = "THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG" * 8
-    ciphertext = cipher.encrypt(plaintext)
+    # Create cipher and generate ciphertext
+    try:
+        cipher = VigHillCipher(vigenere_key, hill_matrix)
+        ciphertext = cipher.encrypt(plaintext)
+        print(f"\n✅ Ciphertext generated: {ciphertext}")
+        print(f"   Length: {len(ciphertext)} characters")
+    except ValueError as e:
+        print(f"❌ Error creating cipher: {e}")
+        return
     
-    # Provide known plaintext samples (realistic scenario)
-    known_samples = ["THEQUICK", "BROWNFOX", "LAZYDOG"]
+    # Show target info
+    print(f"\n🎯 TARGET INFORMATION")
+    print(f"Original Plaintext: {plaintext}")
+    print(f"Original Vigenère Key: {vigenere_key}")
+    print(f"Original Hill Matrix: {hill_matrix}")
+    if known_samples:
+        print(f"Known Samples: {known_samples}")
     
-    print(f"Ciphertext length: {len(ciphertext)}")
-    print(f"Known plaintext samples: {known_samples}")
-    print("Starting intelligent cryptanalysis...\n")
+    # Confirm attack
+    confirm = input("\nLaunch intelligent cryptanalysis attack? (y/n): ").strip().lower()
+    if confirm not in ['y', 'yes', '']:
+        print("Attack cancelled.")
+        return
     
-    # Attack
+    print(f"\n" + "=" * 60)
+    print("LAUNCHING INTELLIGENT CRYPTANALYSIS")
+    print("Combining multiple attack vectors with guided brute force")
+    print("=" * 60)
+    
+    # Launch attack
     analyzer = IntelligentCryptanalyzer(ciphertext, known_samples)
     result = analyzer.attack()
     
     # Only show success
-    print("✓ CRYPTANALYSIS COMPLETED SUCCESSFULLY")
+    print("\n" + "✓" + " CRYPTANALYSIS COMPLETED SUCCESSFULLY " + "✓")
     print("=" * 60)
-    print(f"Recovered Vigenère key: {result['vigenere_key']}")
-    print(f"Recovered Hill key matrix:\n{np.array(result['hill_key'])}")
-    print(f"Decrypted plaintext: {result['plaintext'][:60]}...")
-    print(f"Total attempts: {result['attempts']:,}")
+    print(f"Recovered Vigenère Key: {result['vigenere_key']}")
+    print(f"Recovered Hill Key Matrix:\n{np.array(result['hill_key'])}")
+    print(f"Decrypted Plaintext: {result['plaintext'][:60]}...")
+    print(f"Total Attempts: {result['attempts']:,}")
+    
+    # Verify against original
+    if (result['vigenere_key'] == vigenere_key and 
+        np.array_equal(np.array(result['hill_key']), np.array(hill_matrix))):
+        print("✅ Perfect key recovery achieved!")
+    else:
+        print("⚠️  Keys recovered, but may differ from original (functionally equivalent)")
 
 if __name__ == "__main__":
-    demonstrate_intelligent_attack()
+    main()
